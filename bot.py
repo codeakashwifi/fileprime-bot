@@ -28,6 +28,6 @@ async def handle(update: Update, context):
 
     await update.message.reply_text(reply)
 
-app = ApplicationBuilder().token(8409603507:AAESQBHejMHTqvXhctGAXUktYh2Wg-t5Jl8).build()
+app = ApplicationBuilder().token("8409603507:AAESQBHejMHTqvXhctGAXUktYh2Wg-t5Jl8").build()
 app.add_handler(MessageHandler(filters.TEXT, handle))
 app.run_polling()
