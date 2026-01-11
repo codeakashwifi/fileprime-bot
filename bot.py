@@ -2,7 +2,7 @@ import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, MessageHandler, CallbackQueryHandler, filters
 
-BOT_TOKEN = "8409603507:AAGqFx6avuhpVvrr9YHRzye_P-lgkCnU55E"
+BOT_TOKEN = "8409603507:AAHhhazMyXgSZFYrRspeXDUJ9AVwdJDbKe4"
 RAPIDAPI_KEY = "7566dd4eeamsh59a4b8ee5ea97e2p112454jsn1b19a2f22ec0"
 SHORTLINK_KEY = "c3ca14abfbd0a06e53691ba9af2ba97e4265c7a1"
 
