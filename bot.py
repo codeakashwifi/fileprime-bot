@@ -3,7 +3,7 @@ import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, MessageHandler, CallbackQueryHandler, filters
 
-BOT_TOKEN = "8409603507:AAESQBHejMHTqvXhctGAXUktYh2Wg-t5Jl8"
+BOT_TOKEN = "8409603507:AAGqFx6avuhpVvrr9YHRzye_P-lgkCnU55E"
 API_KEY = "c3ca14abfbd0a06e53691ba9af2ba97e4265c7a1"
 
 def monetize(url):
