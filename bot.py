@@ -1,84 +1,85 @@
-import yt_dlp
 import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, MessageHandler, CallbackQueryHandler, filters
 
 BOT_TOKEN = "8409603507:AAGqFx6avuhpVvrr9YHRzye_P-lgkCnU55E"
-API_KEY = "c3ca14abfbd0a06e53691ba9af2ba97e4265c7a1"
+RAPIDAPI_KEY = "7566dd4eeamsh59a4b8ee5ea97e2p112454jsn1b19a2f22ec0"
+SHORTLINK_KEY = "c3ca14abfbd0a06e53691ba9af2ba97e4265c7a1"
+
+HEADERS = {
+    "X-RapidAPI-Key": RAPIDAPI_KEY,
+    "X-RapidAPI-Host": "youtube-downloader-api.p.rapidapi.com"
+}
 
 def monetize(url):
-    api = f"https://shrinkme.io/api?api={API_KEY}&url={url}"
+    api = f"https://shrinkme.io/api?api={SHORTLINK_KEY}&url={url}"
     r = requests.get(api).json()
     return r.get("shortenedUrl", url)
 
-def get_video_info(url):
-    ydl_opts = {"quiet": True}
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=False)
-        return info
-
-def search_youtube(query):
-    ydl_opts = {"quiet": True, "extract_flat": True}
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        return ydl.extract_info(f"ytsearch5:{query}", download=False)["entries"]
+def get_video(url):
+    api_url = "https://youtube-downloader-api.p.rapidapi.com/yt"
+    params = {"url": url}
+    r = requests.get(api_url, headers=HEADERS, params=params).json()
+    return r
 
 async def handle(update: Update, context):
-    text = update.message.text
+    text = update.message.text.strip()
 
-    # Search mode
-    if "youtube.com" not in text and "youtu.be" not in text:
-        results = search_youtube(text)
-        reply = "🔍 Search Results:\n\n"
-        for r in results:
-            reply += f"{r['title']}\nhttps://youtu.be/{r['id']}\n\n"
-        await update.message.reply_text(reply)
+    # If user sends YouTube link
+    if "youtube.com" in text or "youtu.be" in text:
+        data = get_video(text)
+
+        title = data.get("title")
+        thumb = data.get("thumbnail")
+
+        context.user_data["video"] = data
+
+        buttons = [
+            [
+                InlineKeyboardButton("🎞 720p", callback_data="720"),
+                InlineKeyboardButton("🎞 1080p", callback_data="1080"),
+            ],
+            [
+                InlineKeyboardButton("🎵 MP3", callback_data="mp3")
+            ]
+        ]
+
+        await update.message.reply_photo(
+            photo=thumb,
+            caption=title,
+            reply_markup=InlineKeyboardMarkup(buttons)
+        )
         return
 
-    # Video mode
-    info = get_video_info(text)
-    thumb = info.get("thumbnail")
-    context.user_data["url"] = text
+    # Otherwise treat as search
+    search_url = "https://youtube-downloader-api.p.rapidapi.com/search"
+    r = requests.get(search_url, headers=HEADERS, params={"query": text}).json()
 
-    buttons = [
-        [InlineKeyboardButton("🎞️ 720p", callback_data="720"),
-         InlineKeyboardButton("🎞️ 1080p", callback_data="1080")],
-        [InlineKeyboardButton("🎵 MP3", callback_data="mp3")]
-    ]
+    reply = "🔍 Search Results:\n\n"
+    for v in r.get("videos", [])[:5]:
+        reply += f"{v['title']}\nhttps://youtu.be/{v['videoId']}\n\n"
 
-    await update.message.reply_photo(
-        photo=thumb,
-        caption=info["title"],
-        reply_markup=InlineKeyboardMarkup(buttons)
-    )
+    await update.message.reply_text(reply)
 
-async def button_handler(update: Update, context):
+async def buttons(update: Update, context):
     query = update.callback_query
     await query.answer()
-    url = context.user_data["url"]
+    data = context.user_data["video"]
+
     quality = query.data
 
-    ydl_opts = {"quiet": True}
-    if quality == "mp3":
-        ydl_opts["format"] = "bestaudio"
-    elif quality == "720":
-        ydl_opts["format"] = "bestvideo[height<=720]+bestaudio/best"
+    if quality == "720":
+        link = data["formats"]["mp4"]["720p"]
     elif quality == "1080":
-        ydl_opts["format"] = "bestvideo[height<=1080]+bestaudio/best"
+        link = data["formats"]["mp4"]["1080p"]
+    elif quality == "mp3":
+        link = data["formats"]["mp3"]
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=False)
-        link = info["url"]
-
-    msg = f"Your download link:\n{monetize(link)}"
-
-    # Captions
-    subs = info.get("subtitles")
-    if subs:
-        msg += "\n\n📝 Subtitles available on YouTube."
-
-    await query.edit_message_caption(caption=msg)
+    await query.edit_message_caption(
+        caption=f"Your download link:\n{monetize(link)}"
+    )
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.add_handler(MessageHandler(filters.TEXT, handle))
-app.add_handler(CallbackQueryHandler(button_handler))
+app.add_handler(CallbackQueryHandler(buttons))
 app.run_polling()
